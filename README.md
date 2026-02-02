@@ -34,21 +34,16 @@ A beautiful, local-only Kanban board that syncs with [Usable.dev](https://usable
    };
    ```
 
-3. **Run locally**
+3. **Run the server**
    ```bash
-   # Using Python
-   python -m http.server 8000
-   
-   # Using Node.js
-   npx serve
-   
-   # Using PHP
-   php -S localhost:8000
+   node server.js
    ```
+   
+   This starts a local server with a built-in proxy to bypass CORS restrictions.
 
 4. **Open in browser**
    
-   Navigate to `http://localhost:8000`
+   Navigate to `http://localhost:8888`
 
 ## Usage
 
@@ -102,6 +97,7 @@ Task details and notes go here...
 ```
 usable-kanban/
 ├── index.html      # Main HTML file
+├── server.js       # Local proxy server (bypasses CORS)
 ├── css/
 │   └── main.css    # All styles with design tokens
 ├── js/

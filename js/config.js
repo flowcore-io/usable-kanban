@@ -4,9 +4,9 @@
  */
 
 const CONFIG = {
-  // Usable.dev API settings
-  API_BASE_URL: 'https://usable.dev/api',
-  API_TOKEN: 'YOUR_USABLE_API_TOKEN_HERE', // Replace with your token
+  // Use local proxy to bypass CORS (run: node server.js)
+  API_BASE_URL: '/api',
+  API_TOKEN: 'YOUR_USABLE_API_TOKEN_HERE', // Get from usable.dev
   
   // Workspace and fragment type IDs
   WORKSPACE_ID: '7f72369b-0bd7-4bdb-84cf-0eb5b467b1c9',
