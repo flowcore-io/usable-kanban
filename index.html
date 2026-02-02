@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban — Usable.dev Todos</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header__left">
+        <h1 class="header__title">Kanban</h1>
+        <span class="header__badge" id="task-count">0 tasks</span>
+      </div>
+      <div class="header__right">
+        <button class="button button--ghost" id="refresh-btn" aria-label="Refresh">
+          <svg class="button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+        <button class="button button--primary" id="add-btn">
+          <svg class="button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Add Task</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Board -->
+    <main class="board" id="board">
+      <div class="column" data-status="todo">
+        <div class="column__header">
+          <span class="column__dot column__dot--todo"></span>
+          <h2 class="column__title">To Do</h2>
+          <span class="column__count" data-count="todo">0</span>
+        </div>
+        <div class="column__cards" data-dropzone="todo"></div>
+      </div>
+
+      <div class="column" data-status="in-progress">
+        <div class="column__header">
+          <span class="column__dot column__dot--progress"></span>
+          <h2 class="column__title">In Progress</h2>
+          <span class="column__count" data-count="in-progress">0</span>
+        </div>
+        <div class="column__cards" data-dropzone="in-progress"></div>
+      </div>
+
+      <div class="column" data-status="done">
+        <div class="column__header">
+          <span class="column__dot column__dot--done"></span>
+          <h2 class="column__title">Done</h2>
+          <span class="column__count" data-count="done">0</span>
+        </div>
+        <div class="column__cards" data-dropzone="done"></div>
+      </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="task-modal" aria-hidden="true">
+      <div class="modal__backdrop" data-close></div>
+      <div class="modal__content">
+        <div class="modal__header">
+          <h2 class="modal__title" id="modal-title">Add Task</h2>
+          <button class="modal__close" data-close aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <form class="modal__form" id="task-form">
+          <input type="hidden" id="task-id">
+          
+          <div class="form__group">
+            <label class="form__label" for="task-title">Title</label>
+            <input class="form__input" type="text" id="task-title" required placeholder="What needs to be done?">
+          </div>
+          
+          <div class="form__group">
+            <label class="form__label" for="task-summary">Summary</label>
+            <input class="form__input" type="text" id="task-summary" placeholder="Brief description">
+          </div>
+          
+          <div class="form__row">
+            <div class="form__group">
+              <label class="form__label" for="task-status">Status</label>
+              <select class="form__select" id="task-status">
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            
+            <div class="form__group">
+              <label class="form__label" for="task-priority">Priority</label>
+              <select class="form__select" id="task-priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form__group">
+            <label class="form__label" for="task-content">Details</label>
+            <textarea class="form__textarea" id="task-content" rows="4" placeholder="Additional details..."></textarea>
+          </div>
+          
+          <div class="form__group">
+            <label class="form__label" for="task-tags">Tags</label>
+            <input class="form__input" type="text" id="task-tags" placeholder="tag1, tag2, tag3">
+          </div>
+          
+          <div class="modal__actions">
+            <button type="button" class="button button--ghost" data-close>Cancel</button>
+            <button type="button" class="button button--danger" id="delete-btn" style="display: none;">Delete</button>
+            <button type="submit" class="button button--primary" id="save-btn">Save Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <!-- Loading overlay -->
+    <div class="loading" id="loading">
+      <div class="loading__spinner"></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/kanban.js"></script>
+</body>
+</html>
