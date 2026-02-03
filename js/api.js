@@ -24,7 +24,7 @@ const UsableAPI = {
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `API Error: ${response.status}`);
+      throw new Error(error.message || error.details?.[0]?.message || `API Error: ${response.status}`);
     }
     
     return response.json();
@@ -48,17 +48,19 @@ const UsableAPI = {
    */
   async createTodo(todo) {
     const content = this.buildContent(todo);
-    
+
+    const requestBody = {
+      workspaceId: CONFIG.WORKSPACE_ID,
+      fragmentTypeId: CONFIG.FRAGMENT_TYPE_ID,
+      title: todo.title,
+      summary: todo.summary || todo.title,
+      content: content,
+      tags: this.buildTags(todo.tags)
+    };
+
     const data = await this.request('/memory-fragments', {
       method: 'POST',
-      body: JSON.stringify({
-        workspaceId: CONFIG.WORKSPACE_ID,
-        fragmentTypeId: CONFIG.FRAGMENT_TYPE_ID,
-        title: todo.title,
-        summary: todo.summary || '',
-        content: content,
-        tags: this.buildTags(todo.tags)
-      })
+      body: JSON.stringify(requestBody)
     });
     
     return data;
@@ -72,12 +74,12 @@ const UsableAPI = {
    */
   async updateTodo(id, todo) {
     const content = this.buildContent(todo);
-    
+
     const data = await this.request(`/memory-fragments/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         title: todo.title,
-        summary: todo.summary || '',
+        summary: todo.summary || todo.title,
         content: content,
         tags: this.buildTags(todo.tags)
       })
@@ -87,13 +89,20 @@ const UsableAPI = {
   },
   
   /**
-   * Delete a Todo fragment
+   * Soft-delete a Todo fragment by setting status to 'deleted'
    * @param {string} id - Fragment ID
+   * @param {Object} todo - Current todo data
    * @returns {Promise<void>}
    */
-  async deleteTodo(id) {
+  async deleteTodo(id, todo) {
     await this.request(`/memory-fragments/${id}`, {
-      method: 'DELETE'
+      method: 'PATCH',
+      body: JSON.stringify({
+        title: todo.title,
+        summary: todo.summary || todo.title,
+        content: this.buildContent({ ...todo, status: 'deleted' }),
+        tags: todo.tags || []
+      })
     });
   },
   

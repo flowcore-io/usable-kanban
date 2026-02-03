@@ -111,7 +111,10 @@ class KanbanBoard {
     this.todos.forEach(todo => {
       const parsed = UsableAPI.parseContent(todo.content);
       const status = parsed.status || CONFIG.STATUSES.TODO;
-      
+
+      // Skip deleted items
+      if (status === 'deleted') return;
+
       if (grouped[status]) {
         grouped[status].push({ ...todo, parsed });
       } else {
@@ -382,18 +385,27 @@ class KanbanBoard {
   }
   
   /**
-   * Handle task deletion
+   * Handle task deletion (soft-delete)
    */
   async handleDelete() {
     const id = document.getElementById('task-id').value;
     if (!id) return;
-    
+
+    const todo = this.todos.find(t => t.id === id);
+    if (!todo) return;
+
     if (!confirm('Are you sure you want to delete this task?')) return;
-    
+
     this.showLoading();
-    
+
     try {
-      await UsableAPI.deleteTodo(id);
+      await UsableAPI.deleteTodo(id, {
+        title: todo.title,
+        summary: todo.summary,
+        priority: todo.parsed?.priority,
+        content: todo.parsed?.body,
+        tags: todo.tags
+      });
       this.showToast('Task deleted', 'success');
       this.closeModal();
       await this.loadTodos();
