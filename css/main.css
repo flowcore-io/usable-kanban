@@ -275,6 +275,23 @@ input, select, textarea {
   outline-offset: -2px;
 }
 
+.column__add {
+  margin: var(--space-2) var(--space-3) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  transition: all var(--duration) var(--ease);
+}
+
+.column__add:hover {
+  color: var(--color-text);
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-hover);
+}
+
 /* --------------------------------------------------------------------------
    Card
    -------------------------------------------------------------------------- */

@@ -35,6 +35,11 @@ class KanbanBoard {
     // Header buttons
     document.getElementById('add-btn').addEventListener('click', () => this.openModal());
     document.getElementById('refresh-btn').addEventListener('click', () => this.loadTodos());
+
+    // Column add buttons
+    document.querySelectorAll('[data-add-status]').forEach(btn => {
+      btn.addEventListener('click', () => this.openModal(null, btn.dataset.addStatus));
+    });
     
     // Modal close buttons
     this.modal.querySelectorAll('[data-close]').forEach(el => {
@@ -314,13 +319,14 @@ class KanbanBoard {
   /**
    * Open the task modal
    * @param {Object} todo - Optional todo for editing
+   * @param {string} status - Optional status for new tasks
    */
-  openModal(todo = null) {
+  openModal(todo = null, status = null) {
     const isEditing = !!todo;
-    
+
     document.getElementById('modal-title').textContent = isEditing ? 'Edit Task' : 'Add Task';
     document.getElementById('delete-btn').style.display = isEditing ? 'block' : 'none';
-    
+
     if (isEditing) {
       document.getElementById('task-id').value = todo.id;
       document.getElementById('task-title').value = todo.title || '';
@@ -334,8 +340,9 @@ class KanbanBoard {
     } else {
       this.form.reset();
       document.getElementById('task-id').value = '';
+      document.getElementById('task-status').value = status || CONFIG.STATUSES.TODO;
     }
-    
+
     this.modal.setAttribute('aria-hidden', 'false');
     document.getElementById('task-title').focus();
   }
