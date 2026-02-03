@@ -112,15 +112,17 @@ const UsableAPI = {
    * @returns {string} Formatted content with frontmatter
    */
   buildContent(todo) {
+    const sort = todo.sort !== undefined ? todo.sort : Date.now();
     const frontmatter = [
       '---',
       `status: ${todo.status || CONFIG.STATUSES.TODO}`,
       `priority: ${todo.priority || 'medium'}`,
+      `sort: ${sort}`,
       '---'
     ].join('\n');
-    
+
     const body = todo.content || '';
-    
+
     return `${frontmatter}\n\n${body}`;
   },
   
@@ -146,39 +148,46 @@ const UsableAPI = {
   /**
    * Parse fragment content to extract frontmatter and body
    * @param {string} content - Raw content with frontmatter
-   * @returns {Object} Parsed data { status, priority, body }
+   * @returns {Object} Parsed data { status, priority, sort, body }
    */
   parseContent(content) {
     const result = {
       status: CONFIG.STATUSES.TODO,
       priority: 'medium',
+      sort: 0,
       body: ''
     };
-    
+
     if (!content) return result;
-    
+
     // Extract frontmatter
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-    
+
     if (frontmatterMatch) {
       const frontmatter = frontmatterMatch[1];
       result.body = frontmatterMatch[2].trim();
-      
+
       // Parse status
       const statusMatch = frontmatter.match(/status:\s*(.+)/);
       if (statusMatch) {
         result.status = statusMatch[1].trim();
       }
-      
+
       // Parse priority
       const priorityMatch = frontmatter.match(/priority:\s*(.+)/);
       if (priorityMatch) {
         result.priority = priorityMatch[1].trim();
       }
+
+      // Parse sort
+      const sortMatch = frontmatter.match(/sort:\s*(.+)/);
+      if (sortMatch) {
+        result.sort = parseInt(sortMatch[1].trim(), 10) || 0;
+      }
     } else {
       result.body = content;
     }
-    
+
     return result;
   }
 };

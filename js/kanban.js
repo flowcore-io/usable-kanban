@@ -127,11 +127,14 @@ class KanbanBoard {
       }
     });
     
-    // Render each group
+    // Render each group (sorted by sort field)
     Object.entries(grouped).forEach(([status, todos]) => {
       const zone = document.querySelector(`[data-dropzone="${status}"]`);
       const countEl = document.querySelector(`[data-count="${status}"]`);
-      
+
+      // Sort by sort field (ascending)
+      todos.sort((a, b) => (a.parsed.sort || 0) - (b.parsed.sort || 0));
+
       if (zone) {
         todos.forEach((todo, index) => {
           const card = this.createCard(todo);
@@ -140,7 +143,7 @@ class KanbanBoard {
           zone.appendChild(card);
         });
       }
-      
+
       if (countEl) {
         countEl.textContent = todos.length;
       }
@@ -252,23 +255,52 @@ class KanbanBoard {
    */
   async handleDrop(e) {
     e.preventDefault();
-    
+
     const zone = e.target.closest('[data-dropzone]');
     if (!zone || !this.draggedCardData) return;
-    
+
     zone.classList.remove('column__cards--drag-over');
-    
+
     const newStatus = zone.dataset.dropzone;
     const oldStatus = this.draggedCardData.parsed.status;
-    
-    if (newStatus === oldStatus) return;
-    
+
+    // Find drop position
+    const cards = Array.from(zone.querySelectorAll('.card:not(.card--dragging)'));
+    const dropTarget = e.target.closest('.card');
+    let dropIndex = cards.length; // Default to end
+
+    if (dropTarget && dropTarget !== this.draggedCard) {
+      const targetRect = dropTarget.getBoundingClientRect();
+      const dropY = e.clientY;
+      const targetIndex = cards.indexOf(dropTarget);
+
+      // Drop before or after target based on mouse position
+      if (dropY < targetRect.top + targetRect.height / 2) {
+        dropIndex = targetIndex;
+      } else {
+        dropIndex = targetIndex + 1;
+      }
+    }
+
+    // Calculate new sort value
+    const newSort = this.calculateSortValue(zone, dropIndex);
+
+    // Check if anything changed
+    const statusChanged = newStatus !== oldStatus;
+    const sortChanged = newSort !== this.draggedCardData.parsed.sort;
+
+    if (!statusChanged && !sortChanged) return;
+
     // Optimistic UI update
     if (this.draggedCard) {
       this.draggedCard.remove();
-      zone.appendChild(this.draggedCard);
+      if (cards[dropIndex]) {
+        zone.insertBefore(this.draggedCard, cards[dropIndex]);
+      } else {
+        zone.appendChild(this.draggedCard);
+      }
     }
-    
+
     // Update in API
     try {
       await UsableAPI.updateTodo(this.draggedCardData.id, {
@@ -276,16 +308,18 @@ class KanbanBoard {
         summary: this.draggedCardData.summary,
         status: newStatus,
         priority: this.draggedCardData.parsed.priority,
+        sort: newSort,
         content: this.draggedCardData.parsed.body,
         tags: this.draggedCardData.tags
       });
-      
+
       // Update local data
       this.draggedCardData.parsed.status = newStatus;
-      
+      this.draggedCardData.parsed.sort = newSort;
+
       // Update counts
       this.updateCounts();
-      
+
       this.showToast('Task moved', 'success');
     } catch (error) {
       console.error('Failed to update task:', error);
@@ -293,6 +327,40 @@ class KanbanBoard {
       // Reload to restore correct state
       await this.loadTodos();
     }
+  }
+
+  /**
+   * Calculate sort value for a drop position
+   * @param {HTMLElement} zone - The dropzone element
+   * @param {number} index - The target index
+   * @returns {number} New sort value
+   */
+  calculateSortValue(zone, index) {
+    const cards = Array.from(zone.querySelectorAll('.card:not(.card--dragging)'));
+
+    // Get sort values of surrounding cards
+    const prevCard = cards[index - 1];
+    const nextCard = cards[index];
+
+    const prevSort = prevCard ? this.getCardSort(prevCard.dataset.id) : 0;
+    const nextSort = nextCard ? this.getCardSort(nextCard.dataset.id) : Date.now();
+
+    // Calculate midpoint
+    return Math.floor((prevSort + nextSort) / 2);
+  }
+
+  /**
+   * Get sort value for a card by ID
+   * @param {string} id - Card ID
+   * @returns {number} Sort value
+   */
+  getCardSort(id) {
+    const todo = this.todos.find(t => t.id === id);
+    if (todo) {
+      const parsed = UsableAPI.parseContent(todo.content);
+      return parsed.sort || 0;
+    }
+    return 0;
   }
   
   /**
