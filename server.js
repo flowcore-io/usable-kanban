@@ -8,6 +8,16 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+// Load .env file
+const envPath = path.join(__dirname, '.env');
+const env = {};
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    const match = line.match(/^([^=]+)=["']?(.+?)["']?$/);
+    if (match) env[match[1].trim()] = match[2].trim();
+  });
+}
+
 const PORT = 8888;
 const API_BASE = 'https://usable.dev';
 
@@ -32,6 +42,17 @@ const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // Serve config with environment variables
+  if (req.url === '/config') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      API_TOKEN: env.USABLE_API_TOKEN || '',
+      WORKSPACE_ID: env.USABLE_WORKSPACE_ID || '',
+      FRAGMENT_TYPE_ID: env.USABLE_FRAGMENT_TYPE_ID || ''
+    }));
     return;
   }
 

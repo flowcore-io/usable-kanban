@@ -6,28 +6,40 @@
 const CONFIG = {
   // Use local proxy to bypass CORS (run: node server.js)
   API_BASE_URL: '/api',
-  API_TOKEN: 'YOUR_USABLE_API_TOKEN_HERE', // Get from usable.dev
-  
-  // Workspace and fragment type IDs
-  WORKSPACE_ID: '7f72369b-0bd7-4bdb-84cf-0eb5b467b1c9',
-  FRAGMENT_TYPE_ID: '6eb5d328-ed05-4b14-a3fe-4bb893ab82fc', // Todo type
-  
+  API_TOKEN: '', // Loaded dynamically from server
+
+  // Workspace and fragment type IDs (loaded dynamically from server)
+  WORKSPACE_ID: '',
+  FRAGMENT_TYPE_ID: '',
+
   // Status values used in frontmatter
   STATUSES: {
     TODO: 'todo',
     IN_PROGRESS: 'in-progress',
     DONE: 'done'
   },
-  
+
   // Priority values
   PRIORITIES: ['low', 'medium', 'high'],
-  
+
   // Default tags to include
-  DEFAULT_TAGS: ['kloddin', 'todo']
+  DEFAULT_TAGS: ['kloddin', 'todo'],
+
+  // Initialize config by loading values from server
+  async init() {
+    try {
+      const res = await fetch('/config');
+      const data = await res.json();
+      CONFIG.API_TOKEN = data.API_TOKEN || '';
+      CONFIG.WORKSPACE_ID = data.WORKSPACE_ID || '';
+      CONFIG.FRAGMENT_TYPE_ID = data.FRAGMENT_TYPE_ID || '';
+    } catch (err) {
+      console.error('Failed to load config:', err);
+    }
+  }
 };
 
-// Freeze config to prevent accidental modifications
-Object.freeze(CONFIG);
+// Freeze nested objects
 Object.freeze(CONFIG.STATUSES);
 Object.freeze(CONFIG.PRIORITIES);
 Object.freeze(CONFIG.DEFAULT_TAGS);

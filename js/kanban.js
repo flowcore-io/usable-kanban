@@ -446,6 +446,7 @@ class KanbanBoard {
 }
 
 // Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await CONFIG.init();
   window.kanban = new KanbanBoard();
 });
