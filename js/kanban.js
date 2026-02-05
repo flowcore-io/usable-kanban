@@ -8,7 +8,8 @@ class KanbanBoard {
     this.todos = [];
     this.draggedCard = null;
     this.draggedCardData = null;
-    
+    this.dropIndicator = null;
+
     // DOM elements
     this.board = document.getElementById('board');
     this.modal = document.getElementById('task-modal');
@@ -16,8 +17,18 @@ class KanbanBoard {
     this.toast = document.getElementById('toast');
     this.loading = document.getElementById('loading');
     this.taskCount = document.getElementById('task-count');
-    
+
+    this.createDropIndicator();
     this.init();
+  }
+
+  /**
+   * Create the drop indicator element
+   */
+  createDropIndicator() {
+    this.dropIndicator = document.createElement('div');
+    this.dropIndicator.className = 'drop-indicator';
+    this.dropIndicator.style.display = 'none';
   }
   
   /**
@@ -211,14 +222,27 @@ class KanbanBoard {
   handleDragEnd(e) {
     e.target.classList.remove('card--dragging');
     document.body.classList.remove('is-dragging');
-    
+
     // Remove all drag-over states
     document.querySelectorAll('.column__cards--drag-over').forEach(el => {
       el.classList.remove('column__cards--drag-over');
     });
-    
+
+    // Hide drop indicator
+    this.hideDropIndicator();
+
     this.draggedCard = null;
     this.draggedCardData = null;
+  }
+
+  /**
+   * Hide the drop indicator
+   */
+  hideDropIndicator() {
+    this.dropIndicator.style.display = 'none';
+    if (this.dropIndicator.parentElement) {
+      this.dropIndicator.parentElement.removeChild(this.dropIndicator);
+    }
   }
   
   /**
@@ -227,6 +251,45 @@ class KanbanBoard {
   handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
+    const zone = e.target.closest('[data-dropzone]');
+    if (!zone || !this.draggedCard) return;
+
+    // Position the drop indicator
+    this.positionDropIndicator(zone, e.clientY);
+  }
+
+  /**
+   * Position the drop indicator based on mouse position
+   * @param {HTMLElement} zone - The dropzone element
+   * @param {number} mouseY - The mouse Y position
+   */
+  positionDropIndicator(zone, mouseY) {
+    const cards = Array.from(zone.querySelectorAll('.card:not(.card--dragging)'));
+
+    // Ensure indicator is in this zone
+    if (this.dropIndicator.parentElement !== zone) {
+      zone.appendChild(this.dropIndicator);
+    }
+    this.dropIndicator.style.display = 'block';
+
+    // Find insertion point
+    let insertBeforeCard = null;
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      const cardMiddle = rect.top + rect.height / 2;
+      if (mouseY < cardMiddle) {
+        insertBeforeCard = card;
+        break;
+      }
+    }
+
+    // Position the indicator
+    if (insertBeforeCard) {
+      zone.insertBefore(this.dropIndicator, insertBeforeCard);
+    } else {
+      zone.appendChild(this.dropIndicator);
+    }
   }
   
   /**
@@ -247,6 +310,10 @@ class KanbanBoard {
     const zone = e.target.closest('[data-dropzone]');
     if (zone && !zone.contains(e.relatedTarget)) {
       zone.classList.remove('column__cards--drag-over');
+      // Hide indicator when leaving the zone
+      if (this.dropIndicator.parentElement === zone) {
+        this.dropIndicator.style.display = 'none';
+      }
     }
   }
   
@@ -264,23 +331,24 @@ class KanbanBoard {
     const newStatus = zone.dataset.dropzone;
     const oldStatus = this.draggedCardData.parsed.status;
 
-    // Find drop position
+    // Find drop position based on indicator position
     const cards = Array.from(zone.querySelectorAll('.card:not(.card--dragging)'));
-    const dropTarget = e.target.closest('.card');
+    const indicatorIndex = Array.from(zone.children).indexOf(this.dropIndicator);
     let dropIndex = cards.length; // Default to end
 
-    if (dropTarget && dropTarget !== this.draggedCard) {
-      const targetRect = dropTarget.getBoundingClientRect();
-      const dropY = e.clientY;
-      const targetIndex = cards.indexOf(dropTarget);
-
-      // Drop before or after target based on mouse position
-      if (dropY < targetRect.top + targetRect.height / 2) {
-        dropIndex = targetIndex;
-      } else {
-        dropIndex = targetIndex + 1;
+    // Calculate drop index based on indicator position
+    if (indicatorIndex >= 0) {
+      let cardsBefore = 0;
+      for (let i = 0; i < indicatorIndex; i++) {
+        if (zone.children[i].classList.contains('card') && !zone.children[i].classList.contains('card--dragging')) {
+          cardsBefore++;
+        }
       }
+      dropIndex = cardsBefore;
     }
+
+    // Hide the indicator
+    this.hideDropIndicator();
 
     // Calculate new sort value
     const newSort = this.calculateSortValue(zone, dropIndex);
