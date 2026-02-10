@@ -20,7 +20,7 @@ A beautiful, local-only Kanban board that syncs with [Usable.dev](https://usable
 
 1. **Clone and start the server**
    ```bash
-   git clone https://github.com/kloddin0905/usable-kanban.git
+   git clone https://github.com/flowcore-io/usable-kanban.git
    cd usable-kanban
    node server.js
    ```
