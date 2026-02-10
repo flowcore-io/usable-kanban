@@ -18,8 +18,11 @@ class KanbanBoard {
     this.loading = document.getElementById('loading');
     this.taskCount = document.getElementById('task-count');
 
+    this.cardSize = localStorage.getItem('kanban-card-size') || 'small';
+
     this.createDropIndicator();
     this.init();
+    this.applyCardSize(this.cardSize);
   }
 
   /**
@@ -46,6 +49,11 @@ class KanbanBoard {
     // Header buttons
     document.getElementById('add-btn').addEventListener('click', () => this.openModal());
     document.getElementById('refresh-btn').addEventListener('click', () => this.loadTodos());
+
+    // Card size toggle
+    document.querySelectorAll('[data-size]').forEach(btn => {
+      btn.addEventListener('click', () => this.applyCardSize(btn.dataset.size));
+    });
 
     // Column add buttons
     document.querySelectorAll('[data-add-status]').forEach(btn => {
@@ -588,6 +596,22 @@ class KanbanBoard {
     this.loading.classList.remove('loading--visible');
   }
   
+  /**
+   * Apply card size and update toggle buttons
+   * @param {string} size - 'large', 'medium', or 'small'
+   */
+  applyCardSize(size) {
+    this.cardSize = size;
+    localStorage.setItem('kanban-card-size', size);
+
+    this.board.classList.remove('board--large', 'board--medium', 'board--small');
+    this.board.classList.add(`board--${size}`);
+
+    document.querySelectorAll('[data-size]').forEach(btn => {
+      btn.classList.toggle('size-toggle__btn--active', btn.dataset.size === size);
+    });
+  }
+
   /**
    * Escape HTML to prevent XSS
    * @param {string} text - Text to escape

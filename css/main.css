@@ -141,9 +141,55 @@ input, select, textarea {
   border-radius: var(--radius-full);
 }
 
+.header__center {
+  display: flex;
+  align-items: center;
+}
+
 .header__right {
   display: flex;
   gap: var(--space-2);
+}
+
+/* --------------------------------------------------------------------------
+   Card Size Toggle
+   -------------------------------------------------------------------------- */
+
+.size-toggle {
+  display: flex;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.size-toggle__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  color: var(--color-text-subtle);
+  transition: all var(--duration) var(--ease);
+}
+
+.size-toggle__btn:not(:last-child) {
+  border-right: 1px solid var(--color-border);
+}
+
+.size-toggle__btn:hover {
+  color: var(--color-text-muted);
+  background: var(--color-bg-hover);
+}
+
+.size-toggle__btn--active {
+  color: var(--color-text);
+  background: var(--color-bg-hover);
+}
+
+.size-toggle__btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* --------------------------------------------------------------------------
@@ -391,6 +437,25 @@ input, select, textarea {
   background: var(--color-bg);
   padding: 2px var(--space-2);
   border-radius: var(--radius);
+}
+
+/* Card Size Variants */
+
+.board--medium .card__summary {
+  display: none;
+}
+
+.board--small .card__summary,
+.board--small .card__footer {
+  display: none;
+}
+
+.board--small .card__title {
+  margin-bottom: 0;
+}
+
+.board--small .card {
+  padding: var(--space-2) var(--space-3);
 }
 
 /* --------------------------------------------------------------------------

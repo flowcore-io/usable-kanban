@@ -15,6 +15,19 @@
         <h1 class="header__title">Kanban</h1>
         <span class="header__badge" id="task-count">0 tasks</span>
       </div>
+      <div class="header__center">
+        <div class="size-toggle" id="size-toggle">
+          <button class="size-toggle__btn" data-size="large" aria-label="Large cards" title="Large cards">
+            <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="4" rx="1"/><rect x="1" y="7" width="14" height="4" rx="1"/></svg>
+          </button>
+          <button class="size-toggle__btn" data-size="medium" aria-label="Medium cards" title="Medium cards">
+            <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="3" rx="1"/><rect x="1" y="6" width="14" height="3" rx="1"/><rect x="1" y="11" width="14" height="3" rx="1"/></svg>
+          </button>
+          <button class="size-toggle__btn size-toggle__btn--active" data-size="small" aria-label="Small cards" title="Small cards">
+            <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="14" height="2" rx="0.5"/><rect x="1" y="5" width="14" height="2" rx="0.5"/><rect x="1" y="9" width="14" height="2" rx="0.5"/><rect x="1" y="13" width="14" height="2" rx="0.5"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="header__right">
         <button class="button button--ghost" id="refresh-btn" aria-label="Refresh">
           <svg class="button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
