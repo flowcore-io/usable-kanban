@@ -25,17 +25,30 @@ const CONFIG = {
   // Default tags to include
   DEFAULT_TAGS: ['kloddin', 'todo'],
 
-  // Initialize config by loading values from server
+  // Initialize config: localStorage takes priority, server env as fallback
   async init() {
+    // Load server defaults
+    let serverDefaults = {};
     try {
       const res = await fetch('/config');
-      const data = await res.json();
-      CONFIG.API_TOKEN = data.API_TOKEN || '';
-      CONFIG.WORKSPACE_ID = data.WORKSPACE_ID || '';
-      CONFIG.FRAGMENT_TYPE_ID = data.FRAGMENT_TYPE_ID || '';
+      serverDefaults = await res.json();
     } catch (err) {
-      console.error('Failed to load config:', err);
+      console.error('Failed to load server config:', err);
     }
+
+    CONFIG.API_TOKEN = localStorage.getItem('kanban-api-token') || serverDefaults.API_TOKEN || '';
+    CONFIG.WORKSPACE_ID = localStorage.getItem('kanban-workspace-id') || serverDefaults.WORKSPACE_ID || '';
+    CONFIG.FRAGMENT_TYPE_ID = localStorage.getItem('kanban-fragment-type-id') || serverDefaults.FRAGMENT_TYPE_ID || '';
+  },
+
+  // Save settings to localStorage and update config
+  saveSettings(token, workspaceId, fragmentTypeId) {
+    localStorage.setItem('kanban-api-token', token);
+    localStorage.setItem('kanban-workspace-id', workspaceId);
+    localStorage.setItem('kanban-fragment-type-id', fragmentTypeId);
+    CONFIG.API_TOKEN = token;
+    CONFIG.WORKSPACE_ID = workspaceId;
+    CONFIG.FRAGMENT_TYPE_ID = fragmentTypeId;
   }
 };
 

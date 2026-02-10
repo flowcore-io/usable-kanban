@@ -14,6 +14,8 @@ class KanbanBoard {
     this.board = document.getElementById('board');
     this.modal = document.getElementById('task-modal');
     this.form = document.getElementById('task-form');
+    this.settingsModal = document.getElementById('settings-modal');
+    this.settingsForm = document.getElementById('settings-form');
     this.toast = document.getElementById('toast');
     this.loading = document.getElementById('loading');
     this.taskCount = document.getElementById('task-count');
@@ -50,6 +52,13 @@ class KanbanBoard {
     document.getElementById('add-btn').addEventListener('click', () => this.openModal());
     document.getElementById('refresh-btn').addEventListener('click', () => this.loadTodos());
 
+    // Settings
+    document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
+    this.settingsModal.querySelectorAll('[data-close-settings]').forEach(el => {
+      el.addEventListener('click', () => this.closeSettings());
+    });
+    this.settingsForm.addEventListener('submit', (e) => this.handleSettingsSave(e));
+
     // Card size toggle
     document.querySelectorAll('[data-size]').forEach(btn => {
       btn.addEventListener('click', () => this.applyCardSize(btn.dataset.size));
@@ -73,7 +82,7 @@ class KanbanBoard {
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.closeModal();
+      if (e.key === 'Escape') { this.closeModal(); this.closeSettings(); }
       if (e.key === 'n' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         this.openModal();
@@ -600,6 +609,38 @@ class KanbanBoard {
     this.loading.classList.remove('loading--visible');
   }
   
+  /**
+   * Open settings modal
+   */
+  openSettings() {
+    document.getElementById('settings-token').value = CONFIG.API_TOKEN;
+    document.getElementById('settings-workspace').value = CONFIG.WORKSPACE_ID;
+    document.getElementById('settings-fragment-type').value = CONFIG.FRAGMENT_TYPE_ID;
+    this.settingsModal.setAttribute('aria-hidden', 'false');
+  }
+
+  /**
+   * Close settings modal
+   */
+  closeSettings() {
+    this.settingsModal.setAttribute('aria-hidden', 'true');
+  }
+
+  /**
+   * Save settings and reload
+   */
+  async handleSettingsSave(e) {
+    e.preventDefault();
+    const token = document.getElementById('settings-token').value.trim();
+    const workspaceId = document.getElementById('settings-workspace').value.trim();
+    const fragmentTypeId = document.getElementById('settings-fragment-type').value.trim();
+
+    CONFIG.saveSettings(token, workspaceId, fragmentTypeId);
+    this.closeSettings();
+    this.showToast('Settings saved', 'success');
+    await this.loadTodos();
+  }
+
   /**
    * Apply card size and update toggle buttons
    * @param {string} size - 'large', 'medium', or 'small'
