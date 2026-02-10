@@ -184,10 +184,12 @@ class KanbanBoard {
     card.dataset.id = todo.id;
     
     const priority = todo.parsed.priority || 'medium';
+    const priorityLetter = priority[0].toUpperCase();
     const tags = (todo.tags || []).filter(t => !CONFIG.DEFAULT_TAGS.includes(t));
-    
+
     card.innerHTML = `
       <h3 class="card__title">${this.escapeHtml(todo.title)}</h3>
+      <span class="card__priority-compact card__priority-compact--${priority}">${priorityLetter}</span>
       ${todo.summary ? `<p class="card__summary">${this.escapeHtml(todo.summary)}</p>` : ''}
       <div class="card__footer">
         <span class="card__priority card__priority--${priority}">${priority}</span>

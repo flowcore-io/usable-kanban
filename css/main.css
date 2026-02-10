@@ -439,6 +439,35 @@ input, select, textarea {
   border-radius: var(--radius);
 }
 
+/* Compact priority marker (visible only in small view) */
+
+.card__priority-compact {
+  display: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 4px;
+}
+
+.card__priority-compact--low {
+  background: rgba(107, 114, 128, 0.2);
+  color: var(--color-priority-low);
+}
+
+.card__priority-compact--medium {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--color-priority-medium);
+}
+
+.card__priority-compact--high {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--color-priority-high);
+}
+
 /* Card Size Variants */
 
 .board--medium .card__summary {
@@ -450,12 +479,24 @@ input, select, textarea {
   display: none;
 }
 
-.board--small .card__title {
-  margin-bottom: 0;
+.board--small .card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
 }
 
-.board--small .card {
-  padding: var(--space-2) var(--space-3);
+.board--small .card__title {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board--small .card__priority-compact {
+  display: block;
 }
 
 /* --------------------------------------------------------------------------
