@@ -31,6 +31,38 @@ const UsableAPI = {
   },
   
   /**
+   * Make an API request with a specific token (for settings lookup)
+   */
+  async requestWithToken(endpoint, token) {
+    const url = `${CONFIG.API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `API Error: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  /**
+   * Fetch workspaces accessible with the given token
+   */
+  async getWorkspaces(token) {
+    return this.requestWithToken('/workspaces', token);
+  },
+
+  /**
+   * Fetch fragment types for a workspace
+   */
+  async getFragmentTypes(token, workspaceId) {
+    return this.requestWithToken(`/workspaces/${workspaceId}/fragment-types`, token);
+  },
+
+  /**
    * Fetch all Todo fragments from the workspace
    * @returns {Promise<Array>} List of todo fragments
    */
