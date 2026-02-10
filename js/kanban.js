@@ -507,13 +507,15 @@ class KanbanBoard {
     e.preventDefault();
     
     const id = document.getElementById('task-id').value;
+    const existing = id ? this.todos.find(t => t.id === id) : null;
     const todoData = {
       title: document.getElementById('task-title').value,
       summary: document.getElementById('task-summary').value,
       status: document.getElementById('task-status').value,
       priority: document.getElementById('task-priority').value,
       content: document.getElementById('task-content').value,
-      tags: document.getElementById('task-tags').value
+      tags: document.getElementById('task-tags').value,
+      sort: existing ? UsableAPI.parseContent(existing.content).sort : undefined
     };
     
     this.showLoading();
