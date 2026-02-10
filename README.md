@@ -7,63 +7,58 @@ A beautiful, local-only Kanban board that syncs with [Usable.dev](https://usable
 
 ## Features
 
-- 🎯 **Three-column board**: Todo → In Progress → Done
-- 🖱️ **Drag & drop**: Smooth animations when moving cards
-- ✨ **Real-time sync**: Reads and writes to Usable.dev API
-- 🎨 **Dark theme**: Modern, minimal design
-- ⌨️ **Keyboard shortcuts**: `Ctrl/Cmd + N` to add task, `Esc` to close modal
-- 📱 **Responsive**: Works on any screen size
-- 🚫 **No dependencies**: Pure vanilla HTML/CSS/JS
+- **Three-column board**: Todo, In Progress, Done
+- **Drag & drop**: Reorder cards within and across columns with visual drop indicators
+- **Card size toggle**: Switch between large, medium, and small card views
+- **Settings UI**: Configure API token, workspace, and fragment type from the browser
+- **Real-time sync**: Reads and writes to Usable.dev API
+- **Dark theme**: Modern, minimal design
+- **Keyboard shortcuts**: `Ctrl/Cmd + N` to add task, `Esc` to close modal
+- **No dependencies**: Pure vanilla HTML/CSS/JS
 
 ## Setup
 
-1. **Clone the repository**
+1. **Clone and start the server**
    ```bash
    git clone https://github.com/kloddin0905/usable-kanban.git
    cd usable-kanban
-   ```
-
-2. **Configure your API token**
-   
-   Edit `js/config.js` and replace the placeholder values:
-   ```javascript
-   const CONFIG = {
-     API_TOKEN: 'YOUR_USABLE_API_TOKEN_HERE',  // Get from usable.dev
-     WORKSPACE_ID: 'your-workspace-id',
-     FRAGMENT_TYPE_ID: 'your-todo-fragment-type-id'
-   };
-   ```
-
-3. **Run the server**
-   ```bash
    node server.js
    ```
-   
-   This starts a local server with a built-in proxy to bypass CORS restrictions.
 
-4. **Open in browser**
-   
+2. **Open in browser**
+
    Navigate to `http://localhost:8888`
+
+3. **Configure settings**
+
+   Click the gear icon in the header, enter your Usable.dev API token, and click **Load**. Select your workspace and fragment type from the dropdowns, then click **Save Settings**.
+
+   Settings are stored in your browser's localStorage.
+
+   Alternatively, you can create a `.env` file (see `.env.example`) to provide default values that will be used when localStorage is empty.
 
 ## Usage
 
 ### Adding Tasks
-- Click the **"Add Task"** button or press `Ctrl/Cmd + N`
-- Fill in the title, summary, priority, and details
-- Click **"Save Task"**
+- Click **"Add Task"** or press `Ctrl/Cmd + N`
+- Use the **"+ Add task"** button at the bottom of any column to add directly to that status
 
 ### Moving Tasks
 - **Drag and drop** cards between columns
-- Status updates automatically sync to Usable.dev
+- A visual indicator shows where the card will be placed
+- Status and sort order sync automatically to Usable.dev
 
 ### Editing Tasks
 - **Click** on any card to open the edit modal
-- Update fields and click **"Save Task"**
 
 ### Deleting Tasks
-- Open a task for editing
-- Click the **"Delete"** button
-- Confirm deletion
+- Open a task for editing and click **"Delete"**
+
+### Card Sizes
+Use the toggle in the header to switch between:
+- **Large** — title, summary, priority, and tags
+- **Medium** — title, priority, and tags
+- **Small** — title only (single line with priority indicator)
 
 ## Fragment Structure
 
@@ -73,6 +68,7 @@ Tasks are stored as Usable.dev fragments with YAML frontmatter:
 ---
 status: todo | in-progress | done
 priority: low | medium | high
+sort: 1234567890
 ---
 
 Task details and notes go here...
@@ -97,19 +93,20 @@ Task details and notes go here...
 ```
 usable-kanban/
 ├── index.html      # Main HTML file
+├── favicon.svg     # Kanban board favicon
 ├── server.js       # Local proxy server (bypasses CORS)
+├── .env.example    # Environment variable template
 ├── css/
 │   └── main.css    # All styles with design tokens
-├── js/
-│   ├── config.js   # Configuration (API keys, IDs)
-│   ├── api.js      # Usable.dev API client
-│   └── kanban.js   # Main application logic
-└── README.md
+└── js/
+    ├── config.js   # Configuration (localStorage + env fallback)
+    ├── api.js      # Usable.dev API client
+    └── kanban.js   # Main application logic
 ```
 
 ## Security Note
 
-This app is designed for **local use only**. The API token is stored in plain text in `config.js`. Never deploy this to a public server without implementing proper authentication.
+This app is designed for **local use only**. The API token is stored in localStorage in your browser. Never deploy this to a public server without implementing proper authentication.
 
 ## License
 

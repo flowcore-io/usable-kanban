@@ -54,6 +54,8 @@ class KanbanBoard {
 
     // Settings
     document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
+    document.getElementById('settings-load-btn').addEventListener('click', () => this.loadWorkspaces());
+    document.getElementById('settings-workspace').addEventListener('change', (e) => this.loadFragmentTypes(e.target.value));
     this.settingsModal.querySelectorAll('[data-close-settings]').forEach(el => {
       el.addEventListener('click', () => this.closeSettings());
     });
@@ -613,10 +615,24 @@ class KanbanBoard {
    * Open settings modal
    */
   openSettings() {
-    document.getElementById('settings-token').value = CONFIG.API_TOKEN;
-    document.getElementById('settings-workspace').value = CONFIG.WORKSPACE_ID;
-    document.getElementById('settings-fragment-type').value = CONFIG.FRAGMENT_TYPE_ID;
+    const tokenInput = document.getElementById('settings-token');
+    const workspaceSelect = document.getElementById('settings-workspace');
+    const fragmentTypeSelect = document.getElementById('settings-fragment-type');
+
+    tokenInput.value = CONFIG.API_TOKEN;
+
+    // Reset dropdowns
+    workspaceSelect.innerHTML = '<option value="">Enter token and click Load</option>';
+    workspaceSelect.disabled = true;
+    fragmentTypeSelect.innerHTML = '<option value="">Select a workspace first</option>';
+    fragmentTypeSelect.disabled = true;
+
     this.settingsModal.setAttribute('aria-hidden', 'false');
+
+    // Auto-load if token exists
+    if (CONFIG.API_TOKEN) {
+      this.loadWorkspaces();
+    }
   }
 
   /**
@@ -627,13 +643,101 @@ class KanbanBoard {
   }
 
   /**
+   * Load workspaces from API using the entered token
+   */
+  async loadWorkspaces() {
+    const token = document.getElementById('settings-token').value.trim();
+    const workspaceSelect = document.getElementById('settings-workspace');
+    const fragmentTypeSelect = document.getElementById('settings-fragment-type');
+
+    if (!token) {
+      this.showToast('Enter an API token first', 'error');
+      return;
+    }
+
+    workspaceSelect.innerHTML = '<option value="">Loading...</option>';
+    workspaceSelect.disabled = true;
+
+    try {
+      const data = await UsableAPI.getWorkspaces(token);
+      const workspaces = data.workspaces || data || [];
+
+      workspaceSelect.innerHTML = '<option value="">Select a workspace</option>';
+      workspaces.forEach(ws => {
+        const opt = document.createElement('option');
+        opt.value = ws.id;
+        opt.textContent = ws.name;
+        if (ws.id === CONFIG.WORKSPACE_ID) opt.selected = true;
+        workspaceSelect.appendChild(opt);
+      });
+      workspaceSelect.disabled = false;
+
+      // Auto-load fragment types if a workspace is already selected
+      if (CONFIG.WORKSPACE_ID && workspaceSelect.value) {
+        await this.loadFragmentTypes(workspaceSelect.value);
+      }
+    } catch (err) {
+      workspaceSelect.innerHTML = '<option value="">Failed to load</option>';
+      this.showToast('Failed to load workspaces', 'error');
+    }
+  }
+
+  /**
+   * Load fragment types for a workspace
+   */
+  async loadFragmentTypes(workspaceId) {
+    const token = document.getElementById('settings-token').value.trim();
+    const fragmentTypeSelect = document.getElementById('settings-fragment-type');
+
+    if (!workspaceId) {
+      fragmentTypeSelect.innerHTML = '<option value="">Select a workspace first</option>';
+      fragmentTypeSelect.disabled = true;
+      return;
+    }
+
+    fragmentTypeSelect.innerHTML = '<option value="">Loading...</option>';
+    fragmentTypeSelect.disabled = true;
+
+    try {
+      const data = await UsableAPI.getFragmentTypes(token, workspaceId);
+      const types = data.fragmentTypes || data || [];
+
+      fragmentTypeSelect.innerHTML = '<option value="">Select a fragment type</option>';
+      types.forEach(ft => {
+        const opt = document.createElement('option');
+        opt.value = ft.id;
+        opt.textContent = ft.name;
+        if (ft.id === CONFIG.FRAGMENT_TYPE_ID) opt.selected = true;
+        fragmentTypeSelect.appendChild(opt);
+      });
+      fragmentTypeSelect.disabled = false;
+
+      // Auto-select: saved value > "Todo" > "Knowledge"
+      if (!fragmentTypeSelect.value) {
+        const todoType = types.find(ft => ft.name.toLowerCase() === 'todo');
+        const knowledgeType = types.find(ft => ft.name.toLowerCase() === 'knowledge');
+        const fallback = todoType || knowledgeType;
+        if (fallback) fragmentTypeSelect.value = fallback.id;
+      }
+    } catch (err) {
+      fragmentTypeSelect.innerHTML = '<option value="">Failed to load</option>';
+      this.showToast('Failed to load fragment types', 'error');
+    }
+  }
+
+  /**
    * Save settings and reload
    */
   async handleSettingsSave(e) {
     e.preventDefault();
     const token = document.getElementById('settings-token').value.trim();
-    const workspaceId = document.getElementById('settings-workspace').value.trim();
-    const fragmentTypeId = document.getElementById('settings-fragment-type').value.trim();
+    const workspaceId = document.getElementById('settings-workspace').value;
+    const fragmentTypeId = document.getElementById('settings-fragment-type').value;
+
+    if (!token || !workspaceId || !fragmentTypeId) {
+      this.showToast('Please fill in all settings', 'error');
+      return;
+    }
 
     CONFIG.saveSettings(token, workspaceId, fragmentTypeId);
     this.closeSettings();

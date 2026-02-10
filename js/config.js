@@ -23,7 +23,7 @@ const CONFIG = {
   PRIORITIES: ['low', 'medium', 'high'],
 
   // Default tags to include
-  DEFAULT_TAGS: ['kloddin', 'todo'],
+  DEFAULT_TAGS: ['todo'],
 
   // Initialize config: localStorage takes priority, server env as fallback
   async init() {
