@@ -11,6 +11,8 @@ A beautiful, local-only Kanban board that syncs with [Usable.dev](https://usable
 - **Drag & drop**: Reorder cards within and across columns with visual drop indicators
 - **Card size toggle**: Switch between large, medium, and small card views
 - **Settings UI**: Configure API token, workspace, and fragment type from the browser
+- **OAuth login**: Authenticate via Keycloak to enable the Usable Chat embed
+- **Chat embed**: AI-powered chat panel with authenticated access via JWT
 - **Real-time sync**: Reads and writes to Usable.dev API
 - **Dark theme**: Modern, minimal design
 - **Keyboard shortcuts**: `Ctrl/Cmd + N` to add task, `Esc` to close modal
@@ -54,6 +56,12 @@ A beautiful, local-only Kanban board that syncs with [Usable.dev](https://usable
 ### Deleting Tasks
 - Open a task for editing and click **"Delete"**
 
+### Chat
+- Click the **chat bubble** in the bottom-right corner to open the AI chat panel
+- Requires OAuth login — click **"Login"** in the header to authenticate via Keycloak
+- After login, the chat embed receives your JWT automatically
+- Sessions persist across page refreshes via refresh token
+
 ### Card Sizes
 Use the toggle in the header to switch between:
 - **Large** — title, summary, priority, and tags
@@ -94,15 +102,26 @@ Task details and notes go here...
 usable-kanban/
 ├── index.html      # Main HTML file
 ├── favicon.svg     # Kanban board favicon
-├── server.js       # Local proxy server (bypasses CORS)
+├── server.js       # Local proxy server (CORS proxy + OAuth token proxy)
 ├── .env.example    # Environment variable template
 ├── css/
 │   └── main.css    # All styles with design tokens
 └── js/
+    ├── auth.js     # OAuth PKCE authentication (Keycloak)
     ├── config.js   # Configuration (localStorage + env fallback)
     ├── api.js      # Usable.dev API client
     └── kanban.js   # Main application logic
 ```
+
+## OAuth Authentication
+
+The chat embed uses OAuth (Authorization Code with PKCE) to authenticate against Keycloak:
+
+- **Provider**: `auth.flowcore.io/realms/memory-mesh`
+- **Client**: `mcp_oauth_client` (public, no secret)
+- **Flow**: Login button → Keycloak → callback with code → token exchange via `/auth/token` proxy → JWT sent to chat embed via `postMessage`
+
+The redirect URI `http://localhost:8888/callback` must be registered in the Keycloak client. The refresh token is stored in `localStorage` for session persistence; the access token is kept in memory only.
 
 ## Security Note
 

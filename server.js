@@ -46,6 +46,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Redirect /favicon.ico to favicon.svg
+  if (req.url === '/favicon.ico') {
+    res.writeHead(302, { 'Location': '/favicon.svg' });
+    res.end();
+    return;
+  }
+
   // Serve config with environment variables
   if (req.url === '/config') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -54,6 +61,27 @@ const server = http.createServer((req, res) => {
       WORKSPACE_ID: env.USABLE_WORKSPACE_ID || '',
       FRAGMENT_TYPE_ID: env.USABLE_FRAGMENT_TYPE_ID || ''
     }));
+    return;
+  }
+
+  // OAuth callback — serve index.html so client JS handles the code
+  if (req.url.startsWith('/callback')) {
+    const indexPath = path.join(__dirname, 'index.html');
+    fs.readFile(indexPath, (err, content) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Server error');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(content);
+    });
+    return;
+  }
+
+  // Auth token proxy — forward to Keycloak token endpoint
+  if (req.url === '/auth/token' && req.method === 'POST') {
+    proxyAuthToken(req, res);
     return;
   }
 
@@ -104,6 +132,43 @@ function proxyRequest(req, res) {
     if (body) {
       proxyReq.write(body);
     }
+    proxyReq.end();
+  });
+}
+
+/**
+ * Proxy token requests to Keycloak to avoid CORS issues
+ */
+function proxyAuthToken(req, res) {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', () => {
+    const options = {
+      hostname: 'auth.flowcore.io',
+      port: 443,
+      path: '/realms/memory-mesh/protocol/openid-connect/token',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    };
+
+    const proxyReq = https.request(options, proxyRes => {
+      res.writeHead(proxyRes.statusCode, {
+        'Content-Type': proxyRes.headers['content-type'] || 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('error', err => {
+      console.error('Auth proxy error:', err);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Auth proxy error' }));
+    });
+
+    proxyReq.write(body);
     proxyReq.end();
   });
 }

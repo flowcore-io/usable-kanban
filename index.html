@@ -29,6 +29,18 @@
         </div>
       </div>
       <div class="header__right">
+        <div class="auth-area" id="auth-area">
+          <button class="button button--ghost auth-btn" id="login-btn">
+            <svg class="button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+            </svg>
+            <span>Login</span>
+          </button>
+          <div class="auth-user" id="auth-user" style="display: none;">
+            <span class="auth-user__name" id="auth-user-name"></span>
+            <button class="button button--ghost auth-btn" id="logout-btn">Logout</button>
+          </div>
+        </div>
         <button class="button button--ghost" id="settings-btn" aria-label="Settings">
           <svg class="button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/>
@@ -165,15 +177,22 @@
         <form class="modal__form" id="settings-form">
           <div class="form__group">
             <label class="form__label" for="settings-token">API Token</label>
-            <input class="form__input" type="password" id="settings-token" placeholder="Your Usable.dev API token">
+            <div class="form__input-group">
+              <input class="form__input" type="password" id="settings-token" placeholder="Your Usable.dev API token">
+              <button type="button" class="button button--ghost" id="settings-load-btn">Load</button>
+            </div>
           </div>
           <div class="form__group">
-            <label class="form__label" for="settings-workspace">Workspace ID</label>
-            <input class="form__input" type="text" id="settings-workspace" placeholder="Workspace UUID">
+            <label class="form__label" for="settings-workspace">Workspace</label>
+            <select class="form__select" id="settings-workspace" disabled>
+              <option value="">Enter token and click Load</option>
+            </select>
           </div>
           <div class="form__group">
-            <label class="form__label" for="settings-fragment-type">Fragment Type ID</label>
-            <input class="form__input" type="text" id="settings-fragment-type" placeholder="Fragment type UUID">
+            <label class="form__label" for="settings-fragment-type">Fragment Type</label>
+            <select class="form__select" id="settings-fragment-type" disabled>
+              <option value="">Select a workspace first</option>
+            </select>
           </div>
           <div class="modal__actions">
             <button type="button" class="button button--ghost" data-close-settings>Cancel</button>
@@ -181,6 +200,24 @@
           </div>
         </form>
       </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <button class="chat-fab" id="chat-fab" aria-label="Open chat">
+      <svg class="chat-fab__icon chat-fab__icon--chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+      <svg class="chat-fab__icon chat-fab__icon--close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+    <div class="chat-panel" id="chat-panel">
+      <iframe
+        id="usable-chat"
+        src="https://chat.usable.dev/embed?token=uc_28a18216a2481defb91e541cefa4a90f82cf22930d3d0357d4f725d8f732bd8e"
+        allow="clipboard-write"
+      ></iframe>
     </div>
 
     <!-- Toast -->
@@ -192,6 +229,7 @@
     </div>
   </div>
 
+  <script src="js/auth.js"></script>
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/kanban.js"></script>

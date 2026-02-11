@@ -41,6 +41,21 @@ class KanbanBoard {
    */
   async init() {
     this.bindEvents();
+
+    // Handle OAuth callback redirect
+    const wasCallback = await UsableAuth.handleCallback();
+
+    // If not a callback, try restoring session from stored refresh token
+    if (!wasCallback) {
+      await UsableAuth.tryRestore();
+    }
+
+    this.updateAuthUI();
+
+    // Send JWT to embed if already loaded
+    if (UsableAuth.isAuthenticated()) {
+      this.sendAuthToEmbed();
+    }
     await this.loadTodos();
   }
   
@@ -91,6 +106,41 @@ class KanbanBoard {
       }
     });
     
+    // Auth buttons
+    document.getElementById('login-btn').addEventListener('click', () => UsableAuth.login());
+    document.getElementById('logout-btn').addEventListener('click', () => UsableAuth.logout());
+
+    // PostMessage listener for chat embed auth
+    window.addEventListener('message', async (e) => {
+      if (e.origin !== 'https://chat.usable.dev') return;
+
+      if (e.data?.type === 'READY') {
+        this.sendAuthToEmbed();
+      }
+
+      if (e.data?.type === 'REQUEST_TOKEN_REFRESH') {
+        await UsableAuth.refreshToken();
+        this.sendAuthToEmbed();
+      }
+    });
+
+    // Chat widget toggle
+    const chatFab = document.getElementById('chat-fab');
+    const chatPanel = document.getElementById('chat-panel');
+    const chatIconChat = chatFab.querySelector('.chat-fab__icon--chat');
+    const chatIconClose = chatFab.querySelector('.chat-fab__icon--close');
+    chatFab.addEventListener('click', () => {
+      const isOpen = chatPanel.classList.toggle('chat-panel--open');
+      chatIconChat.style.display = isOpen ? 'none' : '';
+      chatIconClose.style.display = isOpen ? '' : 'none';
+      chatFab.setAttribute('aria-label', isOpen ? 'Close chat' : 'Open chat');
+
+      // Send JWT to embed when panel opens (in case READY was missed)
+      if (isOpen) {
+        this.sendAuthToEmbed();
+      }
+    });
+
     // Setup drop zones
     this.setupDropZones();
   }
@@ -759,6 +809,39 @@ class KanbanBoard {
     document.querySelectorAll('[data-size]').forEach(btn => {
       btn.classList.toggle('size-toggle__btn--active', btn.dataset.size === size);
     });
+  }
+
+  /**
+   * Send the current JWT to the chat embed iframe
+   */
+  sendAuthToEmbed() {
+    const token = UsableAuth.getAccessToken();
+    if (!token) return;
+
+    const iframe = document.getElementById('usable-chat');
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'AUTH', payload: { token } }, 'https://chat.usable.dev');
+    }
+  }
+
+  /**
+   * Update the auth UI based on login state
+   */
+  updateAuthUI() {
+    const loginBtn = document.getElementById('login-btn');
+    const authUser = document.getElementById('auth-user');
+    const authUserName = document.getElementById('auth-user-name');
+
+    if (UsableAuth.isAuthenticated()) {
+      const user = UsableAuth.getUserInfo();
+      loginBtn.style.display = 'none';
+      authUser.style.display = 'flex';
+      authUserName.textContent = user?.name || 'User';
+    } else {
+      loginBtn.style.display = '';
+      authUser.style.display = 'none';
+      authUserName.textContent = '';
+    }
   }
 
   /**
