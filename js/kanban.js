@@ -10,6 +10,7 @@ class KanbanBoard {
     this.draggedCardData = null;
     this.dropIndicator = null;
     this.chatPollInterval = null;
+    this.chatDocked = localStorage.getItem('kanban-chat-docked') === 'true';
 
     // DOM elements
     this.board = document.getElementById('board');
@@ -150,14 +151,21 @@ class KanbanBoard {
 
       // Send JWT + register tools when panel opens (in case READY was missed)
       if (isOpen) {
+        this.applyDockState();
         this.sendAuthToEmbed();
         this.registerChatTools();
         this.chatPollInterval = setInterval(() => this.refreshSilently(), 5000);
       } else {
         clearInterval(this.chatPollInterval);
         this.chatPollInterval = null;
+        // Remove docked layout when panel closes
+        document.body.classList.remove('chat-docked');
+        document.getElementById('chat-panel').classList.remove('chat-panel--docked');
       }
     });
+
+    // Chat dock toggle
+    document.getElementById('chat-dock-btn').addEventListener('click', () => this.toggleDock());
 
     // Setup drop zones
     this.setupDropZones();
@@ -842,6 +850,32 @@ class KanbanBoard {
     document.querySelectorAll('[data-size]').forEach(btn => {
       btn.classList.toggle('size-toggle__btn--active', btn.dataset.size === size);
     });
+  }
+
+  /**
+   * Toggle docked/floating chat mode
+   */
+  toggleDock() {
+    this.chatDocked = !this.chatDocked;
+    localStorage.setItem('kanban-chat-docked', this.chatDocked);
+    this.applyDockState();
+  }
+
+  /**
+   * Apply the current dock state to the DOM
+   */
+  applyDockState() {
+    const chatPanel = document.getElementById('chat-panel');
+    const dockIcon = document.querySelector('.chat-panel__dock-icon--dock');
+    const undockIcon = document.querySelector('.chat-panel__dock-icon--undock');
+    const dockBtn = document.getElementById('chat-dock-btn');
+
+    chatPanel.classList.toggle('chat-panel--docked', this.chatDocked);
+    document.body.classList.toggle('chat-docked', this.chatDocked);
+    dockIcon.style.display = this.chatDocked ? 'none' : '';
+    undockIcon.style.display = this.chatDocked ? '' : 'none';
+    dockBtn.setAttribute('aria-label', this.chatDocked ? 'Undock chat' : 'Dock to side');
+    dockBtn.setAttribute('title', this.chatDocked ? 'Undock chat' : 'Dock to side');
   }
 
   /**
