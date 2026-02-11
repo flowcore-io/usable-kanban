@@ -11,6 +11,7 @@ class KanbanBoard {
     this.dropIndicator = null;
     this.chatPollInterval = null;
     this.chatDocked = localStorage.getItem('kanban-chat-docked') === 'true';
+    this.handledToolCalls = new Set();
 
     // DOM elements
     this.board = document.getElementById('board');
@@ -1061,6 +1062,9 @@ class KanbanBoard {
    */
   async handleToolCall(payload) {
     const { requestId, tool, input } = payload;
+
+    if (this.handledToolCalls.has(requestId)) return;
+    this.handledToolCalls.add(requestId);
 
     try {
       let result;
