@@ -212,6 +212,7 @@ class KanbanBoard {
       if (JSON.stringify(todos) !== JSON.stringify(this.todos)) {
         this.todos = todos;
         this.renderBoard();
+        this.sendBoardContext();
       }
     } catch (_) {
       // Ignore errors during silent refresh
@@ -988,6 +989,42 @@ class KanbanBoard {
   }
 
   /**
+   * Build a text summary of the current board state for the chat AI
+   * @returns {string} Board context description
+   */
+  getBoardContext() {
+    const tasks = this.todos
+      .map(t => ({ ...t, parsed: UsableAPI.parseContent(t.content) }))
+      .filter(t => t.parsed.status !== 'deleted');
+
+    const grouped = { todo: [], 'in-progress': [], done: [] };
+    tasks.forEach(t => {
+      if (grouped[t.parsed.status]) grouped[t.parsed.status].push(t);
+    });
+
+    const lines = [
+      'You are embedded in a Kanban board app. The board has 3 columns: To Do, In Progress, and Done.',
+      'IMPORTANT: Always use the registered parent tools (list_tasks, get_task, create_task, update_task, move_task, delete_task) for ALL kanban operations. Do NOT use MCP fragment tools — the kanban status (todo/in-progress/done) is stored in YAML frontmatter inside the fragment content, not in the fragment API status field.',
+      '',
+      `Current board: ${tasks.length} tasks total — To Do: ${grouped.todo.length}, In Progress: ${grouped['in-progress'].length}, Done: ${grouped.done.length}`,
+      ''
+    ];
+
+    Object.entries(grouped).forEach(([status, items]) => {
+      if (!items.length) return;
+      lines.push(`## ${status} (${items.length})`);
+      items.forEach(t => {
+        const priority = t.parsed.priority || 'medium';
+        const tags = (t.tags || []).filter(tg => !CONFIG.DEFAULT_TAGS.includes(tg));
+        lines.push(`- [${priority}] "${t.title}" (id: ${t.id})${tags.length ? ' tags: ' + tags.join(', ') : ''}`);
+      });
+      lines.push('');
+    });
+
+    return lines.join('\n');
+  }
+
+  /**
    * Register tools and context with the chat embed
    */
   registerChatTools() {
@@ -998,7 +1035,22 @@ class KanbanBoard {
     this.postToEmbed({
       type: 'ADD_CONTEXT',
       payload: {
-        items: [{ contextType: 'workspace', contextId: CONFIG.WORKSPACE_ID }]
+        items: [
+          { contextType: 'workspace', contextId: CONFIG.WORKSPACE_ID },
+          { contextType: 'text', text: this.getBoardContext() }
+        ]
+      }
+    });
+  }
+
+  /**
+   * Send updated board context to the chat embed
+   */
+  sendBoardContext() {
+    this.postToEmbed({
+      type: 'ADD_CONTEXT',
+      payload: {
+        items: [{ contextType: 'text', text: this.getBoardContext() }]
       }
     });
   }
