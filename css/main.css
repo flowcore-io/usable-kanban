@@ -830,6 +830,8 @@ input, select, textarea {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   opacity: 0;
   visibility: hidden;
   transform: translateY(12px) scale(0.96);
@@ -875,7 +877,8 @@ input, select, textarea {
 
 .chat-panel iframe {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   border: none;
 }
 
@@ -897,7 +900,7 @@ body.chat-docked .app {
 }
 
 body.chat-docked .chat-fab {
-  right: calc(400px + var(--space-6));
+  display: none;
 }
 
 /* --------------------------------------------------------------------------
