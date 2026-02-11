@@ -14,6 +14,7 @@ const UsableAuth = {
   _accessToken: null,
   _refreshToken: null,
   _refreshTimer: null,
+  _onTokenChange: null, // callback when token changes
 
   /**
    * Generate a random code verifier for PKCE
@@ -133,6 +134,11 @@ const UsableAuth = {
     }
 
     this.scheduleRefresh(tokens.expires_in || 300);
+
+    // Notify listener of token change
+    if (this._onTokenChange) {
+      this._onTokenChange(tokens.access_token);
+    }
   },
 
   /**

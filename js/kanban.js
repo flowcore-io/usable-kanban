@@ -42,6 +42,9 @@ class KanbanBoard {
   async init() {
     this.bindEvents();
 
+    // Re-send JWT to embed whenever the token changes (refresh, re-auth)
+    UsableAuth._onTokenChange = () => this.sendAuthToEmbed();
+
     // Handle OAuth callback redirect
     const wasCallback = await UsableAuth.handleCallback();
 
