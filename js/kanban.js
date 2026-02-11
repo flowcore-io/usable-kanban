@@ -9,6 +9,7 @@ class KanbanBoard {
     this.draggedCard = null;
     this.draggedCardData = null;
     this.dropIndicator = null;
+    this.chatPollInterval = null;
 
     // DOM elements
     this.board = document.getElementById('board');
@@ -119,11 +120,20 @@ class KanbanBoard {
 
       if (e.data?.type === 'READY') {
         this.sendAuthToEmbed();
+        this.registerChatTools();
       }
 
       if (e.data?.type === 'REQUEST_TOKEN_REFRESH') {
         await UsableAuth.refreshToken();
         this.sendAuthToEmbed();
+      }
+
+      if (e.data?.type === 'TOOL_CALL') {
+        this.handleToolCall(e.data.payload);
+      }
+
+      if (e.data?.type === 'TOOLS_REGISTERED') {
+        console.log('Chat tools registered:', e.data.payload);
       }
     });
 
@@ -138,9 +148,14 @@ class KanbanBoard {
       chatIconClose.style.display = isOpen ? '' : 'none';
       chatFab.setAttribute('aria-label', isOpen ? 'Close chat' : 'Open chat');
 
-      // Send JWT to embed when panel opens (in case READY was missed)
+      // Send JWT + register tools when panel opens (in case READY was missed)
       if (isOpen) {
         this.sendAuthToEmbed();
+        this.registerChatTools();
+        this.chatPollInterval = setInterval(() => this.refreshSilently(), 5000);
+      } else {
+        clearInterval(this.chatPollInterval);
+        this.chatPollInterval = null;
       }
     });
 
@@ -180,6 +195,21 @@ class KanbanBoard {
     }
   }
   
+  /**
+   * Silently refresh todos (no loading spinner or toast)
+   */
+  async refreshSilently() {
+    try {
+      const todos = await UsableAPI.getTodos();
+      if (JSON.stringify(todos) !== JSON.stringify(this.todos)) {
+        this.todos = todos;
+        this.renderBoard();
+      }
+    } catch (_) {
+      // Ignore errors during silent refresh
+    }
+  }
+
   /**
    * Render the entire board
    */
@@ -815,15 +845,259 @@ class KanbanBoard {
   }
 
   /**
+   * Post a message to the chat embed iframe
+   * @param {Object} message - Message to send
+   */
+  postToEmbed(message) {
+    const iframe = document.getElementById('usable-chat');
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(message, 'https://chat.usable.dev');
+    }
+  }
+
+  /**
    * Send the current JWT to the chat embed iframe
    */
   sendAuthToEmbed() {
     const token = UsableAuth.getAccessToken();
     if (!token) return;
+    this.postToEmbed({ type: 'AUTH', payload: { token } });
+  }
 
-    const iframe = document.getElementById('usable-chat');
-    if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage({ type: 'AUTH', payload: { token } }, 'https://chat.usable.dev');
+  /**
+   * Get tool definitions for the chat embed
+   * @returns {Array} Tool schemas
+   */
+  getChatToolDefinitions() {
+    return [
+      {
+        name: 'list_tasks',
+        description: 'List all tasks on the kanban board. Optionally filter by status (todo, in-progress, done).',
+        parameters: {
+          type: 'object',
+          properties: {
+            status: {
+              type: 'string',
+              enum: ['todo', 'in-progress', 'done'],
+              description: 'Filter tasks by status column'
+            }
+          }
+        }
+      },
+      {
+        name: 'get_task',
+        description: 'Get a single task by its ID. Returns full details including title, summary, status, priority, content, and tags.',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The task ID' }
+          },
+          required: ['id']
+        }
+      },
+      {
+        name: 'create_task',
+        description: 'Create a new task on the kanban board.',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Task title' },
+            summary: { type: 'string', description: 'Short summary' },
+            status: { type: 'string', enum: ['todo', 'in-progress', 'done'], description: 'Initial status column (default: todo)' },
+            priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Priority level (default: medium)' },
+            content: { type: 'string', description: 'Detailed description / notes (markdown)' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Tags for the task' }
+          },
+          required: ['title']
+        }
+      },
+      {
+        name: 'update_task',
+        description: 'Update an existing task. Only the provided fields are changed. Does NOT change the status column — use move_task for that.',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The task ID' },
+            title: { type: 'string', description: 'New title' },
+            summary: { type: 'string', description: 'New summary' },
+            priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'New priority' },
+            content: { type: 'string', description: 'New detailed description / notes' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'New tags (replaces existing)' }
+          },
+          required: ['id']
+        }
+      },
+      {
+        name: 'move_task',
+        description: 'Move a task to a different status column on the board.',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The task ID' },
+            status: { type: 'string', enum: ['todo', 'in-progress', 'done'], description: 'Target status column' }
+          },
+          required: ['id', 'status']
+        }
+      },
+      {
+        name: 'delete_task',
+        description: 'Delete a task from the kanban board (soft-delete).',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The task ID' }
+          },
+          required: ['id']
+        }
+      }
+    ];
+  }
+
+  /**
+   * Register tools and context with the chat embed
+   */
+  registerChatTools() {
+    this.postToEmbed({
+      type: 'REGISTER_TOOLS',
+      payload: { tools: this.getChatToolDefinitions() }
+    });
+    this.postToEmbed({
+      type: 'ADD_CONTEXT',
+      payload: {
+        items: [{ contextType: 'workspace', contextId: CONFIG.WORKSPACE_ID }]
+      }
+    });
+  }
+
+  /**
+   * Handle a tool call from the chat embed
+   * @param {Object} payload - { requestId, tool, input }
+   */
+  async handleToolCall(payload) {
+    const { requestId, tool, input } = payload;
+
+    try {
+      let result;
+
+      switch (tool) {
+        case 'list_tasks': {
+          const tasks = this.todos
+            .map(t => ({ ...t, parsed: UsableAPI.parseContent(t.content) }))
+            .filter(t => t.parsed.status !== 'deleted');
+          const filtered = input?.status
+            ? tasks.filter(t => t.parsed.status === input.status)
+            : tasks;
+          result = filtered.map(t => ({
+            id: t.id,
+            title: t.title,
+            summary: t.summary,
+            status: t.parsed.status,
+            priority: t.parsed.priority,
+            tags: (t.tags || []).filter(tg => !CONFIG.DEFAULT_TAGS.includes(tg))
+          }));
+          break;
+        }
+
+        case 'get_task': {
+          const todo = this.todos.find(t => t.id === input.id);
+          if (!todo) throw new Error(`Task not found: ${input.id}`);
+          const parsed = UsableAPI.parseContent(todo.content);
+          result = {
+            id: todo.id,
+            title: todo.title,
+            summary: todo.summary,
+            status: parsed.status,
+            priority: parsed.priority,
+            content: parsed.body,
+            tags: (todo.tags || []).filter(tg => !CONFIG.DEFAULT_TAGS.includes(tg))
+          };
+          break;
+        }
+
+        case 'create_task': {
+          await UsableAPI.createTodo({
+            title: input.title,
+            summary: input.summary || input.title,
+            status: input.status || CONFIG.STATUSES.TODO,
+            priority: input.priority || 'medium',
+            content: input.content || '',
+            tags: input.tags || []
+          });
+          await this.loadTodos();
+          this.showToast('Task created by chat', 'success');
+          result = { success: true, message: `Task "${input.title}" created` };
+          break;
+        }
+
+        case 'update_task': {
+          const existing = this.todos.find(t => t.id === input.id);
+          if (!existing) throw new Error(`Task not found: ${input.id}`);
+          const existingParsed = UsableAPI.parseContent(existing.content);
+          await UsableAPI.updateTodo(input.id, {
+            title: input.title || existing.title,
+            summary: input.summary || existing.summary,
+            status: existingParsed.status,
+            priority: input.priority || existingParsed.priority,
+            sort: existingParsed.sort,
+            content: input.content !== undefined ? input.content : existingParsed.body,
+            tags: input.tags || existing.tags
+          });
+          await this.loadTodos();
+          this.showToast('Task updated by chat', 'success');
+          result = { success: true, message: `Task "${input.title || existing.title}" updated` };
+          break;
+        }
+
+        case 'move_task': {
+          const toMove = this.todos.find(t => t.id === input.id);
+          if (!toMove) throw new Error(`Task not found: ${input.id}`);
+          const moveParsed = UsableAPI.parseContent(toMove.content);
+          await UsableAPI.updateTodo(input.id, {
+            title: toMove.title,
+            summary: toMove.summary,
+            status: input.status,
+            priority: moveParsed.priority,
+            sort: moveParsed.sort,
+            content: moveParsed.body,
+            tags: toMove.tags
+          });
+          await this.loadTodos();
+          this.showToast(`Task moved to ${input.status}`, 'success');
+          result = { success: true, message: `Task "${toMove.title}" moved to ${input.status}` };
+          break;
+        }
+
+        case 'delete_task': {
+          const toDelete = this.todos.find(t => t.id === input.id);
+          if (!toDelete) throw new Error(`Task not found: ${input.id}`);
+          const deleteParsed = UsableAPI.parseContent(toDelete.content);
+          await UsableAPI.deleteTodo(input.id, {
+            title: toDelete.title,
+            summary: toDelete.summary,
+            priority: deleteParsed.priority,
+            content: deleteParsed.body,
+            tags: toDelete.tags
+          });
+          await this.loadTodos();
+          this.showToast('Task deleted by chat', 'success');
+          result = { success: true, message: `Task "${toDelete.title}" deleted` };
+          break;
+        }
+
+        default:
+          throw new Error(`Unknown tool: ${tool}`);
+      }
+
+      this.postToEmbed({
+        type: 'TOOL_RESPONSE',
+        payload: { requestId, result }
+      });
+    } catch (err) {
+      console.error('Tool call failed:', err);
+      this.postToEmbed({
+        type: 'TOOL_RESPONSE',
+        payload: { requestId, result: { error: err.message } }
+      });
     }
   }
 
