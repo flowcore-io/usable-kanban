@@ -191,9 +191,10 @@ class KanbanBoard {
    */
   async loadTodos() {
     this.showLoading();
-    
+
     try {
       this.todos = await UsableAPI.getTodos();
+      await this.initializeSortValues();
       this.renderBoard();
       this.showToast('Tasks loaded', 'success');
     } catch (error) {
@@ -202,6 +203,50 @@ class KanbanBoard {
     } finally {
       this.hideLoading();
     }
+  }
+
+  /**
+   * Assign sort values to cards that have sort=0 or duplicate sort values.
+   * Persists changes to the API.
+   */
+  async initializeSortValues() {
+    const usedSorts = new Set();
+    const needsFix = [];
+
+    for (const todo of this.todos) {
+      const parsed = UsableAPI.parseContent(todo.content);
+      todo.parsed = parsed;
+      const sort = parsed.sort || 0;
+
+      if (sort === 0 || usedSorts.has(sort)) {
+        needsFix.push(todo);
+      } else {
+        usedSorts.add(sort);
+      }
+    }
+
+    if (needsFix.length === 0) return;
+
+    // Find the max existing sort value, start assigning after it
+    const maxSort = usedSorts.size > 0 ? Math.max(...usedSorts) : 0;
+    const GAP = 1000;
+
+    const updates = needsFix.map((todo, i) => {
+      const newSort = maxSort + GAP * (i + 1);
+      todo.parsed.sort = newSort;
+      return UsableAPI.updateTodo(todo.id, {
+        title: todo.title,
+        summary: todo.summary,
+        status: todo.parsed.status,
+        priority: todo.parsed.priority,
+        sort: newSort,
+        content: todo.parsed.body,
+        tags: todo.tags
+      });
+    });
+
+    await Promise.all(updates);
+    console.log(`Fixed sort values for ${needsFix.length} card(s)`);
   }
   
   /**
@@ -297,7 +342,7 @@ class KanbanBoard {
       ${todo.summary ? `<p class="card__summary">${this.escapeHtml(todo.summary)}</p>` : ''}
       <div class="card__footer">
         <span class="card__priority card__priority--${priority}">${priority}</span>
-        ${tags.length ? `
+${tags.length ? `
           <div class="card__tags">
             ${tags.slice(0, 3).map(t => `<span class="card__tag">${this.escapeHtml(t)}</span>`).join('')}
           </div>
@@ -524,11 +569,31 @@ class KanbanBoard {
     const prevCard = cards[index - 1];
     const nextCard = cards[index];
 
-    const prevSort = prevCard ? this.getCardSort(prevCard.dataset.id) : 0;
-    const nextSort = nextCard ? this.getCardSort(nextCard.dataset.id) : Date.now();
+    const prevSort = prevCard ? this.getCardSort(prevCard.dataset.id) : null;
+    const nextSort = nextCard ? this.getCardSort(nextCard.dataset.id) : null;
 
-    // Calculate midpoint
-    return Math.floor((prevSort + nextSort) / 2);
+    // Handle edge cases: dropping at top, bottom, or between cards
+    let newSort;
+    if (prevSort === null && nextSort === null) {
+      newSort = Date.now();
+    } else if (prevSort === null) {
+      newSort = nextSort - 1000;
+    } else if (nextSort === null) {
+      newSort = prevSort + 1000;
+    } else {
+      newSort = Math.floor((prevSort + nextSort) / 2);
+    }
+
+    // Ensure uniqueness — nudge if collides with an existing sort value
+    const existingSorts = new Set(this.todos.map(t => {
+      const parsed = UsableAPI.parseContent(t.content);
+      return parsed.sort || 0;
+    }));
+    while (existingSorts.has(newSort)) {
+      newSort++;
+    }
+
+    return newSort;
   }
 
   /**
