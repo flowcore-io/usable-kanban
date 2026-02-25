@@ -26,6 +26,7 @@ class KanbanBoard {
     this.cardSize = localStorage.getItem('kanban-card-size') || 'small';
 
     this.createDropIndicator();
+    this.initTheme();
     this.init();
     this.applyCardSize(this.cardSize);
   }
@@ -39,6 +40,28 @@ class KanbanBoard {
     this.dropIndicator.style.display = 'none';
   }
   
+  /**
+   * Initialize the theme from localStorage or system preference
+   */
+  initTheme() {
+    const stored = localStorage.getItem('kanban-theme');
+    if (stored) {
+      document.documentElement.setAttribute('data-theme', stored);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }
+
+  /**
+   * Toggle between dark and light themes
+   */
+  toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('kanban-theme', next);
+  }
+
   /**
    * Initialize the application
    */
@@ -72,6 +95,9 @@ class KanbanBoard {
     // Header buttons
     document.getElementById('add-btn').addEventListener('click', () => this.openModal());
     document.getElementById('refresh-btn').addEventListener('click', () => this.loadTodos());
+
+    // Theme toggle
+    document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
 
     // Settings
     document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
